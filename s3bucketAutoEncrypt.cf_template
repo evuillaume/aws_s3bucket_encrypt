@@ -3,7 +3,7 @@
     "Metadata": {},
     "Parameters": {
         "EnvironmentName": {
-            "Description": "An environment name that will be prefixed to resource names",
+            "Description": "An environment name that will be prefixed to resource names : [$env_$resourceName]",
             "Type": "String",
             "Default": "test"
         },
@@ -108,6 +108,108 @@
                 "LambdaExecutionRole"
             ]
         },
+        "SnsTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "TopicName": {
+                    "Fn::Sub": [
+                        "${env}_s3EventsTopic",
+                        {
+                            "env": {
+                                "Ref": "EnvironmentName"
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "SnsTopicSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+                "TopicArn": {
+                    "Ref": "SnsTopic"
+                },
+                "Endpoint": {
+                    "Fn::GetAtt": [
+                        "SqsQueue",
+                        "Arn"
+                    ]
+                },
+                "Protocol": "sqs",
+                "RawMessageDelivery": "true"
+            }
+        },
+        "SqsQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": {
+                    "Fn::Sub": [
+                        "${env}_s3EventsQueue",
+                        {
+                            "env": {
+                                "Ref": "EnvironmentName"
+                            }
+                        }
+                    ]
+                },
+                "DelaySeconds": "0",
+                "ReceiveMessageWaitTimeSeconds": "0",
+                "VisibilityTimeout": "30"
+            }
+        },
+        "SqsQueuePolicy": {
+            "Type": "AWS::SQS::QueuePolicy",
+            "Properties": {
+                "Queues": [
+                    {
+                        "Ref": "SqsQueue"
+                    }
+                ],
+                "PolicyDocument": {
+                    "Id": "MyTopicPolicy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "s3EventsSqsStatementPolicy",
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "SQS:*",
+                            "Resource": {
+                                "Fn::GetAtt": [
+                                    "SqsQueue",
+                                    "Arn"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "SnsPolicy": {
+            "Type": "AWS::SNS::TopicPolicy",
+            "Properties": {
+                "Topics": [
+                    {
+                        "Ref": "SnsTopic"
+                    }
+                ],
+                "PolicyDocument": {
+                    "Id": "s3EventsSnsStatementPolicy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "s3EventsSnsStatementPolicy",
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "sns:Publish",
+                            "Resource": {
+                                "Ref": "SnsTopic"
+                            }
+                        }
+                    ]
+                }
+            }
+        },
         "ruleS3events": {
             "Type": "AWS::Events::Rule",
             "Properties": {
@@ -137,6 +239,12 @@
                             ]
                         },
                         "Id": "LambdaTarget"
+                    },
+                    {
+                        "Arn": {
+                            "Ref": "SnsTopic"
+                        },
+                        "Id": "SnsTarget"
                     }
                 ]
             },
