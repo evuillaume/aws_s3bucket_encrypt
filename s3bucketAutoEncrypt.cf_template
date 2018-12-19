@@ -126,24 +126,7 @@
                 "EventPattern": {
                     "source": [
                         "aws.s3"
-                    ],
-                    "detail-type":[
-                        "AWS API Call via CloudTrail"
-                    ],
-                    "detail":{
-                        "eventSource":[
-                            "s3.amazonaws.com"
-                        ],
-                        "eventName":[
-                            "CreateBucket",
-                            "PutBucketAcl",
-                            "PutBucketPolicy",
-                            "PutBucketEncryption",
-                            "DeleteBucketEncryption",
-                            "PutBucketTagging",
-                            "DeleteBucketTagging"
-                        ]
-                    }
+                    ]
                 },
                 "Targets": [
                     {
